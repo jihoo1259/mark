@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>웹 벤치마크</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #dbe3ef;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --good: #15803d;
+      --mid: #b45309;
+      --low: #b91c1c;
+      --shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .app {
+      width: min(920px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    header {
+      padding: 12px 0 16px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(14px, 3.5vw, 24px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .notice {
+      display: grid;
+      gap: 8px;
+      color: #334155;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 800;
+      font-size: 22px;
+      min-height: 62px;
+      padding: 14px 18px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    button:active {
+      background: var(--accent-dark);
+      transform: translateY(1px);
+    }
+
+    button:disabled {
+      background: #93a4bf;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .secondary {
+      display: none;
+      background: #111827;
+    }
+
+    .status {
+      display: none;
+      gap: 10px;
+    }
+
+    .status.active {
+      display: grid;
+    }
+
+    .status-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    progress {
+      width: 100%;
+      height: 18px;
+      overflow: hidden;
+      border: 0;
+      border-radius: 999px;
+      background: #e5eaf2;
+    }
+
+    progress::-webkit-progress-bar {
+      background: #e5eaf2;
+    }
+
+    progress::-webkit-progress-value {
+      background: var(--accent);
+      border-radius: 999px;
+    }
+
+    progress::-moz-progress-bar {
+      background: var(--accent);
+      border-radius: 999px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: min(56vw, 360px);
+      min-height: 230px;
+      background: linear-gradient(180deg, #e0f2fe 0%, #dbeafe 48%, #c7d2fe 100%);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .results {
+      display: none;
+    }
+
+    .results.show {
+      display: block;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #f8fafc;
+      min-height: 112px;
+    }
+
+    .metric.full {
+      grid-column: 1 / -1;
+      text-align: center;
+      background: #eef4ff;
+    }
+
+    .label {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .value {
+      display: block;
+      font-size: clamp(28px, 8vw, 48px);
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: 0;
+      word-break: keep-all;
+    }
+
+    .unit {
+      font-size: 0.48em;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .device {
+      display: grid;
+      gap: 8px;
+      color: #334155;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .device-row {
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr);
+      gap: 8px;
+      border-bottom: 1px solid #edf2f7;
+      padding-bottom: 8px;
+    }
+
+    .device-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .device-row strong {
+      color: var(--text);
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      margin: 10px 0 0;
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        padding: 14px;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .result-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .device-row {
+        grid-template-columns: 86px minmax(0, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>웹 벤치마크</h1>
+    </header>
+
+    <section class="panel notice">
+      <div>실행 전 배터리 절전모드를 끄고, 충전기를 분리한 상태에서 테스트하는 것을 권장합니다.</div>
+      <div>브라우저, 발열, 화면 주사율, 백그라운드 앱에 따라 점수가 달라질 수 있습니다.</div>
+    </section>
+
+    <section class="panel controls">
+      <button id="startButton" type="button">테스트 시작</button>
+      <button id="resetButton" class="secondary" type="button">다시 테스트</button>
+
+      <div id="status" class="status">
+        <div class="status-line">
+          <strong id="phaseText">준비 중</strong>
+          <span id="percentText">0%</span>
+        </div>
+        <progress id="progressBar" value="0" max="100"></progress>
+      </div>
+    </section>
+
+    <section class="panel">
+      <canvas id="stage" width="900" height="360" aria-label="GPU 그래픽 테스트 화면"></canvas>
+    </section>
+
+    <section id="results" class="panel results">
+      <div class="result-grid">
+        <div class="metric">
+          <span class="label">CPU 점수</span>
+          <span class="value"><span id="cpuHashRate">-</span> <span class="unit">hash/s</span></span>
+        </div>
+        <div class="metric">
+          <span class="label">CPU 총 시간</span>
+          <span class="value"><span id="cpuTime">-</span> <span class="unit">ms</span></span>
+        </div>
+        <div class="metric">
+          <span class="label">현재 물고기 수</span>
+          <span class="value"><span id="fishCount">-</span> <span class="unit">마리</span></span>
+        </div>
+        <div class="metric">
+          <span class="label">GPU 평균 FPS</span>
+          <span class="value"><span id="gpuAvgFps">-</span> <span class="unit">fps</span></span>
+        </div>
+        <div class="metric">
+          <span class="label">GPU 1% low FPS</span>
+          <span class="value"><span id="gpuLowFps">-</span> <span class="unit">fps</span></span>
+        </div>
+        <div class="metric">
+          <span class="label">안정성</span>
+          <span class="value"><span id="stability">-</span><span class="unit">%</span></span>
+        </div>
+        <div class="metric">
+          <span class="label">추정 주사율</span>
+          <span class="value"><span id="refreshRate">-</span> <span class="unit">Hz</span></span>
+        </div>
+      </div>
+      <p class="small">결과 캡처 시 위 숫자와 아래 기기 정보가 함께 보이게 촬영하면 됩니다.</p>
+    </section>
+
+    <section class="panel">
+      <div class="device">
+        <div class="device-row">
+          <strong>UserAgent</strong>
+          <span id="ua">-</span>
+        </div>
+        <div class="device-row">
+          <strong>해상도</strong>
+          <span id="screenInfo">-</span>
+        </div>
+        <div class="device-row">
+          <strong>CPU 테스트</strong>
+          <span>SHA-256 5000회</span>
+        </div>
+        <div class="device-row">
+          <strong>GPU 테스트</strong>
+          <span>Canvas 자동 어항 30초, 60fps 유지 기준</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const CPU_ITERATIONS = 5000;
+    const GPU_TEST_MS = 30000;
+    const INITIAL_FISH_COUNT = 160;
+    const MIN_FISH_COUNT = 40;
+    const MAX_FISH_COUNT = 3000;
+    const FISH_STEP = 60;
+    const TARGET_FPS = 60;
+
+    const canvas = document.getElementById("stage");
+    const ctx = canvas.getContext("2d", { alpha: false });
+    const startButton = document.getElementById("startButton");
+    const resetButton = document.getElementById("resetButton");
+    const statusBox = document.getElementById("status");
+    const phaseText = document.getElementById("phaseText");
+    const percentText = document.getElementById("percentText");
+    const progressBar = document.getElementById("progressBar");
+    const resultsBox = document.getElementById("results");
+
+    let fishes = [];
+    let currentFishCount = INITIAL_FISH_COUNT;
+    let idleAnimationId = 0;
+    let lastIdleTime = 0;
+
+    const result = {
+      cpuMs: 0,
+      cpuHashRate: 0,
+      avgFps: 0,
+      lowFps: 0,
+      stability: 0,
+      fishCount: 0,
+      refreshRate: 0
+    };
+
+    function setDeviceInfo() {
+      const ratio = window.devicePixelRatio || 1;
+      document.getElementById("ua").textContent = navigator.userAgent;
+      document.getElementById("screenInfo").textContent =
+        `${screen.width} × ${screen.height}, DPR ${ratio.toFixed(2)}, viewport ${innerWidth} × ${innerHeight}`;
+    }
+
+    function resizeCanvas() {
+      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width * ratio));
+      canvas.height = Math.max(1, Math.round(rect.height * ratio));
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      setFishCount(currentFishCount);
+      drawScene(performance.now());
+    }
+
+    function makeFish(index, width, height) {
+      const palette = [202, 210, 218, 190, 172, 225];
+      return {
+        x: Math.random() * width,
+        y: Math.random() * height,
+        size: 4 + Math.random() * 9,
+        speed: 20 + Math.random() * 76,
+        wave: 0.7 + Math.random() * 2.4,
+        phase: Math.random() * Math.PI * 2,
+        hue: palette[index % palette.length] + Math.random() * 8 - 4,
+        alpha: 0.28 + Math.random() * 0.34
+      };
+    }
+
+    function setFishCount(count) {
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width || 900;
+      const height = rect.height || 360;
+      currentFishCount = Math.max(MIN_FISH_COUNT, Math.min(MAX_FISH_COUNT, Math.round(count)));
+
+      if (fishes.length > currentFishCount) {
+        fishes.length = currentFishCount;
+        return;
+      }
+
+      while (fishes.length < currentFishCount) {
+        fishes.push(makeFish(fishes.length, width, height));
+      }
+    }
+
+    function drawFish(fish, time) {
+      const wiggle = Math.sin(time * 0.005 * fish.wave + fish.phase);
+      const tail = fish.size * (0.9 + wiggle * 0.14);
+      ctx.save();
+      ctx.translate(fish.x, fish.y);
+      ctx.fillStyle = `hsla(${fish.hue}, 42%, 42%, ${fish.alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, fish.size * 1.55, fish.size * 0.78, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-fish.size * 1.3, 0);
+      ctx.lineTo(-fish.size * 2.15, -tail * 0.62);
+      ctx.lineTo(-fish.size * 2.0, tail * 0.62);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.52)";
+      ctx.beginPath();
+      ctx.arc(fish.size * 0.72, -fish.size * 0.2, Math.max(1, fish.size * 0.15), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawScene(time) {
+      const rect = canvas.getBoundingClientRect();
+      const width = rect.width || 900;
+      const height = rect.height || 360;
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = "#dcebf5";
+      ctx.fillRect(0, 0, width, height);
+
+      // 배경 입자와 물고기를 같이 그려서 GPU/Canvas 부하를 만든다.
+      for (let i = 0; i < 90; i++) {
+        const x = (i * 71 + time * 0.018) % (width + 20) - 10;
+        const y = (i * 43 + Math.sin(time * 0.001 + i) * 26) % height;
+        ctx.fillStyle = "rgba(255,255,255,0.22)";
+        ctx.beginPath();
+        ctx.arc(x, y, 1.2 + (i % 4), 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (const fish of fishes) {
+        fish.x += fish.speed / 60;
+        fish.y += Math.sin(time * 0.002 * fish.wave + fish.phase) * 0.35;
+        if (fish.x > width + fish.size * 3) {
+          fish.x = -fish.size * 3;
+          fish.y = Math.random() * height;
+        }
+        drawFish(fish, time);
+      }
+    }
+
+    function startIdleAnimation(time) {
+      if (!lastIdleTime) lastIdleTime = time;
+      drawScene(time);
+      idleAnimationId = requestAnimationFrame(startIdleAnimation);
+    }
+
+    function stopIdleAnimation() {
+      if (idleAnimationId) cancelAnimationFrame(idleAnimationId);
+      idleAnimationId = 0;
+      lastIdleTime = 0;
+    }
+
+    function updateProgress(phase, percent) {
+      const fixed = Math.max(0, Math.min(100, percent));
+      phaseText.textContent = phase;
+      percentText.textContent = `${Math.round(fixed)}%`;
+      progressBar.value = fixed;
+    }
+
+    function nextFrame() {
+      return new Promise(resolve => requestAnimationFrame(resolve));
+    }
+
+    function makeCpuPayload(seed) {
+      const text = `tablet-benchmark-${seed}-${navigator.userAgent}-${screen.width}x${screen.height}`;
+      return new TextEncoder().encode(text);
+    }
+
+    async function runCpuTest() {
+      updateProgress("CPU 워밍업", 2);
+      await crypto.subtle.digest("SHA-256", makeCpuPayload("warmup"));
+
+      let buffer = makeCpuPayload("main");
+      const start = performance.now();
+
+      for (let i = 0; i < CPU_ITERATIONS; i++) {
+        const digest = await crypto.subtle.digest("SHA-256", buffer);
+        buffer = new Uint8Array(digest);
+        if (i % 80 === 0) {
+          updateProgress("CPU 테스트", 5 + (i / CPU_ITERATIONS) * 35);
+          await nextFrame();
+        }
+      }
+
+      const elapsed = performance.now() - start;
+      result.cpuMs = elapsed;
+      result.cpuHashRate = CPU_ITERATIONS / (elapsed / 1000);
+    }
+
+    async function estimateRefreshRate() {
+      const times = [];
+      let last = 0;
+
+      return new Promise(resolve => {
+        function sample(time) {
+          if (last) times.push(time - last);
+          last = time;
+          if (times.length >= 75) {
+            const sorted = times.slice().sort((a, b) => a - b);
+            const median = sorted[Math.floor(sorted.length / 2)];
+            resolve(1000 / median);
+            return;
+          }
+          requestAnimationFrame(sample);
+        }
+        requestAnimationFrame(sample);
+      });
+    }
+
+    async function runGpuTest() {
+      const frameTimes = [];
+      const fpsSamples = [];
+      const start = performance.now();
+      let lastAdjust = start;
+      let last = start;
+
+      currentFishCount = INITIAL_FISH_COUNT;
+      setFishCount(currentFishCount);
+
+      return new Promise(resolve => {
+        function frame(now) {
+          const elapsed = now - start;
+          const delta = now - last;
+          last = now;
+
+          drawScene(now);
+
+          if (delta > 0 && elapsed > 350) {
+            const fps = 1000 / delta;
+            frameTimes.push(delta);
+            fpsSamples.push({ t: elapsed, fps });
+          }
+
+          if (now - lastAdjust >= 1500) {
+            const recent = fpsSamples.filter(item => item.t >= elapsed - 1500);
+            const recentAvg = averageFps(recent);
+            const recentLow = percentileLow(recent.map(item => item.fps), 0.1);
+
+            // 60fps를 크게 깨지 않는 선에서 물고기 수를 자동으로 맞춘다.
+            if (recentAvg >= TARGET_FPS - 1.5 && recentLow >= TARGET_FPS - 8) {
+              setFishCount(currentFishCount + FISH_STEP);
+            } else if (recentAvg < TARGET_FPS - 5) {
+              setFishCount(currentFishCount - Math.ceil(FISH_STEP * 0.7));
+            }
+            lastAdjust = now;
+          }
+
+          updateProgress(`GPU 테스트: ${currentFishCount}마리`, 40 + (elapsed / GPU_TEST_MS) * 60);
+
+          if (elapsed < GPU_TEST_MS) {
+            requestAnimationFrame(frame);
+          } else {
+            const avgFps = fpsSamples.reduce((sum, item) => sum + item.fps, 0) / Math.max(1, fpsSamples.length);
+            const sortedFps = fpsSamples.map(item => item.fps).sort((a, b) => a - b);
+            const onePercentCount = Math.max(1, Math.ceil(sortedFps.length * 0.01));
+            const lowFps = sortedFps.slice(0, onePercentCount).reduce((sum, fps) => sum + fps, 0) / onePercentCount;
+            const firstTen = fpsSamples.filter(item => item.t >= 0 && item.t <= 10000);
+            const lastTen = fpsSamples.filter(item => item.t >= GPU_TEST_MS - 10000);
+            const firstAvg = averageFps(firstTen);
+            const lastAvg = averageFps(lastTen);
+
+            result.avgFps = avgFps;
+            result.lowFps = lowFps;
+            result.stability = firstAvg > 0 ? (lastAvg / firstAvg) * 100 : 0;
+            result.fishCount = currentFishCount;
+            resolve();
+          }
+        }
+        requestAnimationFrame(frame);
+      });
+    }
+
+    function averageFps(samples) {
+      if (!samples.length) return 0;
+      return samples.reduce((sum, item) => sum + item.fps, 0) / samples.length;
+    }
+
+    function percentileLow(values, ratio) {
+      if (!values.length) return 0;
+      const sorted = values.slice().sort((a, b) => a - b);
+      const count = Math.max(1, Math.ceil(sorted.length * ratio));
+      return sorted.slice(0, count).reduce((sum, value) => sum + value, 0) / count;
+    }
+
+    function formatNumber(value, digits = 0) {
+      return Number(value).toLocaleString("ko-KR", {
+        maximumFractionDigits: digits,
+        minimumFractionDigits: digits
+      });
+    }
+
+    function showResults() {
+      document.getElementById("cpuHashRate").textContent = formatNumber(result.cpuHashRate, 0);
+      document.getElementById("cpuTime").textContent = formatNumber(result.cpuMs, 0);
+      document.getElementById("fishCount").textContent = formatNumber(result.fishCount, 0);
+      document.getElementById("gpuAvgFps").textContent = formatNumber(result.avgFps, 1);
+      document.getElementById("gpuLowFps").textContent = formatNumber(result.lowFps, 1);
+      document.getElementById("stability").textContent = formatNumber(result.stability, 0);
+      document.getElementById("refreshRate").textContent = formatNumber(result.refreshRate, 0);
+
+      resultsBox.classList.add("show");
+      resetButton.style.display = "block";
+      updateProgress("완료", 100);
+    }
+
+    async function startBenchmark() {
+      if (!window.crypto || !crypto.subtle) {
+        alert("이 브라우저는 Web Crypto API를 지원하지 않습니다.");
+        return;
+      }
+
+      startButton.disabled = true;
+      resetButton.style.display = "none";
+      resultsBox.classList.remove("show");
+      statusBox.classList.add("active");
+      stopIdleAnimation();
+      updateProgress("준비 중", 0);
+
+      try {
+        result.refreshRate = await estimateRefreshRate();
+        await runCpuTest();
+        await runGpuTest();
+        showResults();
+      } catch (error) {
+        console.error(error);
+        alert("테스트 중 오류가 발생했습니다. 브라우저를 새로고침한 뒤 다시 실행해 주세요.");
+      } finally {
+        startButton.disabled = false;
+        startButton.textContent = "테스트 시작";
+      }
+    }
+
+    function resetBenchmark() {
+      resultsBox.classList.remove("show");
+      statusBox.classList.remove("active");
+      progressBar.value = 0;
+      percentText.textContent = "0%";
+      phaseText.textContent = "준비 중";
+      resetButton.style.display = "none";
+      stopIdleAnimation();
+      idleAnimationId = requestAnimationFrame(startIdleAnimation);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    startButton.addEventListener("click", startBenchmark);
+    resetButton.addEventListener("click", resetBenchmark);
+    window.addEventListener("resize", resizeCanvas);
+
+    setDeviceInfo();
+    resizeCanvas();
+    idleAnimationId = requestAnimationFrame(startIdleAnimation);
+  </script>
+</body>
+</html>
